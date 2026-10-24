@@ -22,7 +22,7 @@ It works with the Claude desktop app's Code tab and the terminal CLI, since both
 | Alerts | Red LED blinks fast (waiting) or pulses slowly (done); buzzer beeps twice or once. The screen wakes. |
 | Last message | Open a session to read Claude's last reply, word-wrapped, A pages through it. |
 | Allow / Deny | When Claude asks permission to run a tool, the stick shows the command and you choose. If you don't answer in 20 s, or the stick is off, the normal dialog appears on your Mac. |
-| Settings | Backlight (3 steps, never fully off), buzzer on/off (both saved on the stick), reboot. |
+| Settings | Backlight (3 steps, never fully off), screen sleep (30 s / 2 min / 10 min / never), buzzer on/off (all saved on the stick), reboot. |
 | Battery | 4-bar icon in the header (rough, reads high while charging). |
 
 ### Controls
@@ -33,7 +33,7 @@ It works with the Claude desktop app's Code tab and the terminal CLI, since both
 | **A** (front) | open row | next page (wraps) | confirm |
 | **Power** (click) | mark all read | back | leave it to the Mac's dialog |
 
-The screen sleeps after 30 s idle (unless an alert is pending). The first press only wakes it.
+The screen sleeps when idle (30 s by default, see Settings > Sleep), unless an alert is pending. The first press only wakes it.
 
 ## What you need
 
@@ -138,7 +138,7 @@ curl -s -m 25 --data-binary '{"session_id":"t1","cwd":"/x/test","tool_name":"Bas
 | Symptom | Likely cause |
 |---|---|
 | `NOLINK` in the header / "Bridge down" in Settings | Bridge isn't running, the Mac's IP changed (update `bridge` in `config.json`, run `./deploy.sh`), the Mac is asleep, or the token doesn't match. It shows after 3 failed polls and clears on its own. |
-| Screen black | It's the 30 s idle sleep: press any button. Settings > Light might also be on a low step. |
+| Screen black | It's the idle sleep: press any button, or raise Settings > Sleep. Settings > Light might also be on a low step. |
 | Screen shows scattered pixels | Display panels vary between batches. The driver sends M5Stack's full ST7789 init sequence for this reason; if your unit still misbehaves, lower `baudrate` in `stick/hw.py`. |
 | Stick freezes for a second | Your Mac's WiFi has latency spikes (AirDrop/AWDL or a crowded channel are common causes); wired Ethernet for the Mac helps. The stick tolerates stalls but can't remove them. |
 | Nothing appears when you use Claude | Hooks not merged, or session started before you added them. Check `curl -s -H "X-Token: <token>" localhost:8787/state`. |
@@ -156,7 +156,6 @@ curl -s -m 25 --data-binary '{"session_id":"t1","cwd":"/x/test","tool_name":"Bas
 
 - **Replies like "continue" / "stop".** Nothing lets an outside program type into a running Claude desktop session. Possible routes are channels (needs a launch flag, desktop support unconfirmed) or a terminal multiplexer for CLI sessions.
 - **Starting the bridge at login.**
-- Screen-sleep timeout setting.
 - Allow/Deny has been tested end to end with simulated prompts; real Claude prompts through the hook are still worth a hands-on check.
 
 ## Repo layout

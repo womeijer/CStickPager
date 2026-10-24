@@ -4,6 +4,9 @@ from net import wifi, Fetch
 from ui import UI, Menu, Detail, COL, READ, MARK, FG, DIM
 
 
+SLEEP = (("30s", 30000), ("2min", 120000), ("10min", 600000), ("never", None))  # screen sleep after this much idle time
+
+
 class App:
     sessions, acked, ok, alerted, first = [], {}, False, set(), True
 
@@ -23,7 +26,11 @@ def settings_items(app):
         app.bright = (app.bright + 1) % 3
         axp.brightness(app.bright)
         save()
+    def sleep(ui):
+        app.sleep = (app.sleep + 1) % len(SLEEP)
+        save()
     return [("Light: " + ("low", "med", "high")[app.bright], FG, cycle),
+            ("Sleep: " + SLEEP[app.sleep][0], FG, sleep),
             ("Buzzer: " + ("on" if app.buzzer else "off"), FG, toggle),
             ("WiFi " + ("ok" if wifi().isconnected() else "down"), DIM, None),
             ("Bridge " + ("ok" if app.ok else "down"), DIM, None),
@@ -57,12 +64,13 @@ try:
 except (OSError, ValueError):
     prefs = {}
 app.axp, app.bright, app.buzzer = axp, prefs.get("bright", 1), prefs.get("buzzer", cfg.get("buzzer", True))
+app.sleep = prefs.get("sleep", 0) % len(SLEEP)
 axp.brightness(app.bright)
 
 
 def save():
     with open("prefs.json", "w") as f:
-        json.dump({"bright": app.bright, "buzzer": app.buzzer}, f)
+        json.dump({"bright": app.bright, "buzzer": app.buzzer, "sleep": app.sleep}, f)
 
 
 btn, alert = Buttons(axp), Alert()
@@ -147,7 +155,7 @@ while True:
             ui.key(k)
         else:
             axp.backlight(True)  # first press only wakes the screen
-    elif axp.bl and not pend and time.ticks_diff(now, last_input) > 30000:
+    elif axp.bl and not pend and SLEEP[app.sleep][1] and time.ticks_diff(now, last_input) > SLEEP[app.sleep][1]:
         axp.backlight(False)
 
     if ui.dirty:
