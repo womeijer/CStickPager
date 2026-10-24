@@ -84,6 +84,7 @@ w.active(True)
 settings = Menu("Settings", settings_items)
 ui = UI(d, app, Menu(lambda a: "PAGER (%d new)" % len(pending(a)) if pending(a) else "PAGER", home_items, ack_all))
 last_poll, last_input, last_conn = -10000, time.ticks_ms(), -10000
+usb, last_usb, redraw_at, last_redraw = axp.r(0x00) & 0x20, 0, 0, time.ticks_ms()
 
 while True:
     now = time.ticks_ms()
@@ -120,6 +121,14 @@ while True:
     if app.ok and app.first:  # whatever is already waiting at boot is not news
         app.first = False
         app.acked = {s["id"]: s["seq"] for s in app.sessions}
+
+    if time.ticks_diff(now, last_usb) > 500:
+        last_usb = now
+        if axp.r(0x00) & 0x20 != usb:  # unplugging dips the supply and can blank the panel's picture
+            usb, redraw_at = axp.r(0x00) & 0x20, time.ticks_add(now, 800)
+    if redraw_at and time.ticks_diff(now, redraw_at) > 0 or time.ticks_diff(now, last_redraw) > 30000:
+        redraw_at, last_redraw = 0, now
+        ui.cache, ui.dirty = {}, True  # rows are cached, so force every one to be drawn again
 
     pend = pending(app)
     new = {(s["id"], s["seq"]) for s in pend} - app.alerted
