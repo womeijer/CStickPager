@@ -113,3 +113,10 @@ Done and verified on hardware: milestones 1-4 (WiFi, session list, LED + buzzer 
 Not done: replies (continue / stop / yes / no). Needs a way to send text into the desktop app; nothing researched yet. Also not done: start-at-login for the bridge, battery-saving sleep beyond the 30 s backlight timeout.
 
 Gotchas learned: `raise SystemExit` in `main.py` soft-resets and loops; a full-screen buffer (65 KB) does not fit in RAM, so draw by rows; `bytearray * int` is unsupported.
+
+## Link robustness and permissions (2026-10-24)
+
+- **Allow/Deny** is a `PermissionRequest` hook that POSTs to the bridge's `/ask`, which blocks up to `PAGER_ASK_WAIT` (20 s) for the stick's `/answer`. It returns at once (normal dialog) if the stick hasn't polled in 15 s or the session is already asking.
+- **Network**: the stick has only ~23 KB of free network heap, and the Mac's WiFi has latency spikes. So the client is non-blocking (`select.poll`), reuses one HTTP/1.1 keep-alive connection, caches the bridge address, and sends answers from an outbox that retries up to 10 times. If the link is down for 20 s it resets WiFi, and after three failed heals it reboots. Any crash is logged to `crash.log` and the board restarts.
+- **Diagnostics**: Settings shows the failed-poll count and last error; `link.log` records link changes; the bridge logs polling gaps over 5 s and ask/answer events.
+- The earlier "Status" section above is partly outdated: replies via Allow/Deny now exist; free-text replies (continue / stop) and start-at-login do not.

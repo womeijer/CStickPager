@@ -140,9 +140,10 @@ curl -s -m 25 --data-binary '{"session_id":"t1","cwd":"/x/test","tool_name":"Bas
 | `NOLINK` in the header / "Bridge down" in Settings | Bridge isn't running, the Mac's IP changed (update `bridge` in `config.json`, run `./deploy.sh`), the Mac is asleep, or the token doesn't match. It shows after 3 failed polls and clears on its own. |
 | Screen black | It's the idle sleep: press any button, or raise Settings > Sleep. Settings > Light might also be on a low step. |
 | Screen shows scattered pixels | Display panels vary between batches. The driver sends M5Stack's full ST7789 init sequence for this reason; if your unit still misbehaves, lower `baudrate` in `stick/hw.py`. |
-| Stick freezes for a second | Your Mac's WiFi has latency spikes (AirDrop/AWDL or a crowded channel are common causes); wired Ethernet for the Mac helps. The stick tolerates stalls but can't remove them. |
+| Stick freezes for a second | Your Mac's WiFi has latency spikes (AirDrop/AWDL or a crowded channel are common causes); wired Ethernet for the Mac helps. The stick's network code never blocks the buttons, keeps one connection open, and resets its WiFi (then itself) if the link stays down for 20 s, so it recovers in 20-60 s. A permission prompt that arrives during a drop falls back to the normal dialog. |
+| Link keeps dropping | Settings shows `<failed polls> <last error>` (e.g. `105` = out of network buffers). The stick also writes link up/down events to `link.log` and crashes to `crash.log` (read with `mpremote fs cat link.log`). The bridge prints `stick polled again after N s` when polling stalls over 5 s. |
 | Nothing appears when you use Claude | Hooks not merged, or session started before you added them. Check `curl -s -H "X-Token: <token>" localhost:8787/state`. |
-| Permission prompt doesn't reach the stick | The stick must have polled in the last 6 s, and Claude must be in a mode that asks (not auto-accept) for a command that isn't already allowed. |
+| Permission prompt doesn't reach the stick | The stick must have polled in the last 15 s, and Claude must be in a mode that asks (not auto-accept) for a command that isn't already allowed. |
 | Flash fails | Lower the baud rate, replug the cable, make sure it's a data cable. |
 
 ## Security notes
@@ -156,7 +157,7 @@ curl -s -m 25 --data-binary '{"session_id":"t1","cwd":"/x/test","tool_name":"Bas
 
 - **Replies like "continue" / "stop".** Nothing lets an outside program type into a running Claude desktop session. Possible routes are channels (needs a launch flag, desktop support unconfirmed) or a terminal multiplexer for CLI sessions.
 - **Starting the bridge at login.**
-- Allow/Deny has been tested end to end with simulated prompts; real Claude prompts through the hook are still worth a hands-on check.
+- Allow/Deny works end to end (Allow pressed by hand on a real prompt; Deny with scripted presses). The 20 s answer window is tight on a flaky link: raise `PAGER_ASK_WAIT` if you miss it.
 
 ## Repo layout
 
@@ -166,7 +167,7 @@ hooks/settings-snippet.json   Claude Code hooks to merge into ~/.claude/settings
 stick/                  MicroPython app (copied to the board by deploy.sh)
   main.py               event loop, polling, alerts
   hw.py                 display (ST7789), power chip (AXP192), buttons, LED, buzzer
-  net.py                non-blocking HTTP client
+  net.py                non-blocking HTTP/1.1 keep-alive client, cached address lookup
   ui.py                 screen stack and screens
   config.example.json   copy to config.json and edit
 deploy.sh               copy stick/ to the board and reboot it
