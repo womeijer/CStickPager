@@ -87,7 +87,8 @@ def hook_reply(v):
 def do_ask(d):
     """Blocks until the stick answers, ASK_WAIT passes, or returns at once if no stick is listening."""
     sid = d.get("session_id")
-    if time.time() - last_seen > 6 or sid in asks:
+    if time.time() - last_seen > 15 or sid in asks:  # polls arrive late when the Mac's WiFi stalls
+        print(time.strftime("%H:%M:%S"), "ask skipped (stick offline or busy):", ask_detail(d), flush=True)
         return b""
     detail = ask_detail(d)
     on_event({"hook_event_name": "Notification", "session_id": sid, "cwd": d.get("cwd"), "message": detail})
@@ -100,6 +101,7 @@ def do_ask(d):
         s.pop("ask", None)
         if a["v"] in ("allow", "deny"):
             s["state"] = "working"  # no PostToolUse follows a deny
+    print(time.strftime("%H:%M:%S"), "ask answered:", a["v"], "|", detail, flush=True)
     return hook_reply(a["v"])
 
 
@@ -113,6 +115,10 @@ def snapshot():
 
 
 class H(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"  # the stick keeps one connection open: a new TCP connection every 2 s exhausted its lwIP tables
+    timeout = 20  # reap idle connections
+    wbufsize = 65536  # headers and body leave in one segment (flushed after each request)
+
     def reply(self, code, body=b""):
         self.send_response(code)
         self.send_header("Content-Length", str(len(body)))
@@ -136,6 +142,7 @@ class H(BaseHTTPRequestHandler):
             if not self.authed():
                 return self.reply(403)
             a = asks.get(d.get("id"))
+            print(time.strftime("%H:%M:%S"), "answer received:", d.get("v"), "open" if a else "NO OPEN REQUEST", flush=True)
             if not a or d.get("v") not in ("allow", "deny", "pass"):
                 return self.reply(404)
             a["v"] = d["v"]
@@ -156,6 +163,9 @@ class H(BaseHTTPRequestHandler):
             return self.reply(404)
         if not self.authed():
             return self.reply(403)
+        gap = time.time() - last_seen
+        if gap > 5:  # polls come every 2 s, so a gap means the stick could not reach us
+            print(time.strftime("%H:%M:%S"), "stick polled again after %d s" % gap, flush=True)
         last_seen = time.time()
         self.reply(200, json.dumps(snapshot()).encode())
 
