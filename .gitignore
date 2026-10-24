@@ -1,0 +1,4 @@
+.venv/
+fw/
+stick/config.json
+__pycache__/

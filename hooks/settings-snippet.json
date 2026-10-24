@@ -1,0 +1,65 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -m 2 --data-binary @- http://localhost:8787/hook || true"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -m 2 --data-binary @- http://localhost:8787/hook || true"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -m 2 --data-binary @- http://localhost:8787/hook || true"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -m 2 --data-binary @- http://localhost:8787/hook || true"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -m 2 --data-binary @- http://localhost:8787/hook || true"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -m 25 --data-binary @- http://localhost:8787/ask || true",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
