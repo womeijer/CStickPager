@@ -48,7 +48,9 @@ def ack_all(ui):
         ui.app.acked[s["id"]] = s["seq"]
 
 
-d, axp = Display(), AXP()
+axp = AXP()  # power first: the panel needs its supply up before it is initialised
+time.sleep_ms(100)
+d = Display()
 d.rect(0, 0, 240, H, 0)
 d.text("Pager starting...", 8, 8, FG)
 try:

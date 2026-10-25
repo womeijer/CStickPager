@@ -15,8 +15,8 @@ def rgb(r, g, b):
 class Display:
     memo = {}
 
-    def __init__(self):
-        self.spi = SPI(1, baudrate=27_000_000, sck=Pin(13), mosi=Pin(15))
+    def __init__(self, baud=27_000_000):
+        self.spi = SPI(1, baudrate=baud, sck=Pin(13), mosi=Pin(15))
         self.cs, self.dc = Pin(5, Pin.OUT, value=1), Pin(23, Pin.OUT)
         rst = Pin(18, Pin.OUT, value=0)
         sleep_ms(50)
@@ -90,7 +90,12 @@ class Display:
 class AXP:
     def __init__(self):
         self.i2c = I2C(0, scl=Pin(22), sda=Pin(21), freq=400_000)
-        self.w(0x28, 0xCC)  # LDO2 (backlight) + LDO3 at 3.0V
+        # M5Stack's own AXP192 setup: after the battery runs flat the chip boots with its defaults, and LDO3 (the panel's supply) may be off
+        for reg, v in ((0x28, 0xCC),  # LDO2 (backlight) + LDO3 at 3.0V
+                       (0x82, 0xFF), (0x33, 0xC0), (0x36, 0x0C), (0x91, 0xF0), (0x90, 0x02),
+                       (0x30, 0x80), (0x39, 0xFC), (0x35, 0xA2), (0x32, 0x46)):
+            self.w(reg, v)
+        self.w(0x12, self.r(0x12) | 0x4D)  # EXTEN, LDO3, LDO2, DCDC1 on
         self.w(0x42, 0x03)  # enable power-button click/long-press flags
         self.w(0x46, 0xFF)
         self.backlight(True)
